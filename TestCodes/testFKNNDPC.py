@@ -53,7 +53,7 @@ for i in range(4,5):
     print("real labels:")
     print(dataObject.y)
     # Paras: feature matrix, labels, CN, threshold, K value of KNN
-    cls = FKNNDPC(dataObject.X, dataObject.y, C, dataObject.thr, K)
+    cls = FKNNDPC(dataObject.X, dataObject.y, C, K)
     cls.fit()
     print("predict labels:")
     print(cls.Labels)

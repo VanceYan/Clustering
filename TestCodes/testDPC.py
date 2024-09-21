@@ -53,7 +53,7 @@ for i in range(4,5):
     print("real labels:")
     print(dataObject.y)
     # Paras: feature matrix, labels, CN, threshold
-    cls = DPC(dataObject.X, dataObject.y, C, dataObject.thr)
+    cls = DPC(dataObject.X, dataObject.y, C)
     cls.fit()
     print("predict labels:")
     print(cls.Labels)

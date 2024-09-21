@@ -8,21 +8,18 @@ Density peak clustering based fuzzy weighted K Nearest Neighbours
 
 
 class FKNNDPC:
-    def __init__(self, X, y, k, thr, K):
+    def __init__(self, X, y, k, K):
         '''
         Constructor
         :param X:       The feature matrix of dataset
         :param y:       Label of dataset
         :param k:       The number of sub clusters in the dataset
-        :param thr:     The boundary position between continuous and discrete attributes in the feature matrix of the dataset
         :param K:       The number of nearest neighbors for each sample
         '''
         # Feature matrix
         self.X = X
         # Label vector
         self.y = y
-        # Segmentation positions between continuous and discrete attributes
-        self.thr = thr
         # The number of clusters to be clustered
         self.NC = k
         # The number of nearest neighbors for each sample
@@ -30,7 +27,7 @@ class FKNNDPC:
         # The number of samples included in the dataset
         self.Size = len(self.y)
         # The number of features in the dataset
-        self.FN = len(self.X[0])
+        self.FN = X.shape[1]
         # Distance matrix
         self.DistanceMatrix = []
         # K-nearest neighbor matrix of the sample
@@ -72,44 +69,13 @@ class FKNNDPC:
         '''
         # Initialize a distance matrix
         self.DistanceMatrix = np.zeros((self.Size, self.Size), dtype=float)
-        # If the feature matrix is all numerical data
-        if self.thr == -1:
-            # If there are no discrete attributes, the entire feature matrix can be directly normalized
-            self.X = self.__Normalization(self.X)
-            # Calculate distance matrix (based on Euclidean distance)
-            for i in range(self.Size - 1):
-                for j in range(i + 1, self.Size):
-                    dis = np.sum(np.power(self.X[i] - self.X[j], 2)) ** 0.5
-                    self.DistanceMatrix[i][j] = self.DistanceMatrix[j][i] = dis
-        # If the feature matrix contains discrete attributes (mixing distance needs to be calculated)
-        else:
-            # If there are discrete attributes, it is necessary to calculate the mixing distance
-            # Normalize numerical features
-            numeric_X = self.__Normalization(self.X[:, :self.thr])
-            # Extract discrete features
-            dispered_X = self.X[:, self.thr:]
-            disperedCol = len(dispered_X[0])
-            # For discrete attributes, if there are missing values,
-            # the default distance of the sample at that attribute is equal to the "range of attribute values"
-            dispersedDefaultDis = np.zeros(disperedCol, dtype=float)
-            for col in range(disperedCol):
-                dispersedDefaultDis[col] = len(np.unique(dispered_X[:, col]))
-            # Calculate distance
-            for i in range(self.Size - 1):
-                for j in range(i + 1, self.Size):
-                    # For numerical features
-                    dis_numeric = np.sum(np.power(numeric_X[i] - numeric_X[j], 2)) ** 0.5
-                    # For discrete features
-                    dis_dispered = 0
-                    for col in range(disperedCol):
-                        # Requirement: Missing values in the obtained feature matrix must be marked with a "?" symbol
-                        if dispered_X[i][col] == "?" or dispered_X[j][col] == "?":
-                            dis_dispered += dispersedDefaultDis[col]
-                        elif dispered_X[i][col] != dispered_X[j][col]:
-                            dis_dispered += 1
-                    # Accumulate the two types of distances by weight based on the proportion of numerical and discrete attributes
-                    dis_mixed = self.thr * dis_numeric / self.FN + (self.FN - self.thr) * dis_dispered / self.FN
-                    self.DistanceMatrix[i][j] = self.DistanceMatrix[j][i] = dis_mixed
+        # Normalize the input data
+        self.X = self.__Normalization(self.X)
+        # Calculate distance matrix (based on Euclidean distance)
+        for i in range(self.Size - 1):
+            for j in range(i + 1, self.Size):
+                dis = np.sum(np.power(self.X[i] - self.X[j], 2)) ** 0.5
+                self.DistanceMatrix[i][j] = self.DistanceMatrix[j][i] = dis
 
 
     def __getKNNInfomation(self):

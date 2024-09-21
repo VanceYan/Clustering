@@ -8,13 +8,12 @@ Density peak clustering
 
 
 class DPC:
-    def __init__(self, X, y, k, thr, dcRatio=1.5, kernel="gaussian"):
+    def __init__(self, X, y, k, dcRatio=1.5, kernel="gaussian"):
         '''
         Constructor
         :param X:       The feature matrix of dataset
         :param y:       Label of dataset
         :param k:       The number of sub clusters in the dataset
-        :param thr:     The boundary position between continuous and discrete attributes in the feature matrix of the dataset
         :param dcRatio: The radius ratio (this value is a percentage, which means entering 1 represents 1% of the nearest neighbors),
                         and the recommended range for this value is between 1 and 2
         :param kernel:  Kernel function of density , including "cutoff-kernel" "gaussian-kernel"
@@ -23,8 +22,6 @@ class DPC:
         self.X = X
         # Label vector
         self.y = y
-        # Segmentation positions between continuous and discrete attributes
-        self.thr = thr
         # The number of clusters to be clustered
         self.NC = k
         # The radius ratio of the dataset
@@ -34,7 +31,7 @@ class DPC:
         # The number of samples included in the dataset
         self.Size = len(self.y)
         # The number of features in the dataset
-        self.FN = len(self.X[0])
+        self.FN = X.shape[1]
         # Distance matrix
         self.DistanceMatrix = []
         # Cutoff distance
@@ -73,44 +70,13 @@ class DPC:
         '''
         # Initialize a distance matrix
         self.DistanceMatrix = np.zeros((self.Size, self.Size), dtype=float)
-        # If the feature matrix is all numerical data
-        if self.thr == -1:
-            # If there are no discrete attributes, the entire feature matrix can be directly normalized
-            self.X = self.__Normalization(self.X)
-            # Calculate distance matrix (based on Euclidean distance)
-            for i in range(self.Size - 1):
-                for j in range(i + 1, self.Size):
-                    dis = np.sum(np.power(self.X[i] - self.X[j], 2)) ** 0.5
-                    self.DistanceMatrix[i][j] = self.DistanceMatrix[j][i] = dis
-        # If the feature matrix contains discrete attributes (mixing distance needs to be calculated)
-        else:
-            # If there are discrete attributes, it is necessary to calculate the mixing distance
-            # Normalize numerical features
-            numeric_X = self.__Normalization(self.X[:, :self.thr])
-            # Extract discrete features
-            dispered_X = self.X[:, self.thr:]
-            disperedCol = len(dispered_X[0])
-            # For discrete attributes, if there are missing values,
-            # the default distance of the sample at that attribute is equal to the "range of attribute values"
-            dispersedDefaultDis = np.zeros(disperedCol, dtype=float)
-            for col in range(disperedCol):
-                dispersedDefaultDis[col] = len(np.unique(dispered_X[:, col]))
-            # Calculate distance
-            for i in range(self.Size - 1):
-                for j in range(i + 1, self.Size):
-                    # For numerical features
-                    dis_numeric = np.sum(np.power(numeric_X[i] - numeric_X[j], 2)) ** 0.5
-                    # For discrete features
-                    dis_dispered = 0
-                    for col in range(disperedCol):
-                        # Requirement: Missing values in the obtained feature matrix must be marked with a "?" symbol
-                        if dispered_X[i][col] == "?" or dispered_X[j][col] == "?":
-                            dis_dispered += dispersedDefaultDis[col]
-                        elif dispered_X[i][col] != dispered_X[j][col]:
-                            dis_dispered += 1
-                    # Accumulate the two types of distances by weight based on the proportion of numerical and discrete attributes
-                    dis_mixed = self.thr * dis_numeric / self.FN + (self.FN - self.thr) * dis_dispered / self.FN
-                    self.DistanceMatrix[i][j] = self.DistanceMatrix[j][i] = dis_mixed
+        # Normalize the input data
+        self.X = self.__Normalization(self.X)
+        # Calculate distance matrix (based on Euclidean distance)
+        for i in range(self.Size - 1):
+            for j in range(i + 1, self.Size):
+                dis = np.sum(np.power(self.X[i] - self.X[j], 2)) ** 0.5
+                self.DistanceMatrix[i][j] = self.DistanceMatrix[j][i] = dis
 
 
     def __getCutoffDistance(self):
@@ -161,7 +127,7 @@ class DPC:
         self.DecisionValue = np.multiply(self.Density, self.RelativeDistance)
         # Initialize cluster center:
         # Select n samples with the highest decision value as cluster centers
-        self.ClusterCenters = np.argsort(self.DecisionValue)[-self.NC:][::-1]
+        self.ClusterCenters = np.argsort(self.DecisionValue)[::-1][:self.NC]
         # Assign different label values to the selected initial cluster center: 1, 2, 3,... (positive integer)
         for i in range(self.NC):
             self.Labels[self.ClusterCenters[i]] = i + 1
